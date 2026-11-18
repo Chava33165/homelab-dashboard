@@ -1,0 +1,16 @@
+# Certificado real de Let's Encrypt para el hostname MagicDNS de este Pi, generado con
+# `tailscale cert` (no ACME propio de Caddy -- evita tener que exponerse a internet para
+# el challenge HTTP-01/DNS-01). Confiado automaticamente por Safari/iOS, sin instalar
+# ningun perfil de CA. Ver deploy/systemd/tailscale-cert-renew.* para la renovacion
+# (tailscale cert no se renueva solo) y docs/access.md para el paso a paso completo.
+{
+	auto_https off
+}
+
+homelab.tu-tailnet.ts.net {
+	tls /tls/homelab.tu-tailnet.ts.net.crt /tls/homelab.tu-tailnet.ts.net.key
+
+	reverse_proxy dashboard:8080
+
+	encode gzip
+}

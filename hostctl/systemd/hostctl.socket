@@ -1,0 +1,12 @@
+[Unit]
+Description=Socket de homelab-hostctl
+
+[Socket]
+ListenStream=/run/homelab-hostctl.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=homelab-hostctl
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target

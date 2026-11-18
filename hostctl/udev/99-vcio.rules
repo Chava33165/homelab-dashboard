@@ -1,0 +1,5 @@
+# /dev/vcio (interfaz mailbox del VideoCore, usada por vcgencmd) viene por defecto
+# root:root crw-------. Esta regla lo pone en el grupo "vcio" con permiso de
+# lectura/escritura de grupo, para que hostctl (que esta en ese grupo, ver
+# systemd/hostctl.service) pueda llamar vcgencmd sin ser root.
+SUBSYSTEM=="vcio", GROUP="vcio", MODE="0660"

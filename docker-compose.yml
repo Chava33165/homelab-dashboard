@@ -1,0 +1,159 @@
+services:
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    env_file: ./deploy/docker-socket-proxy.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - proxy-net
+    mem_limit: 64m
+    read_only: true
+    tmpfs:
+      # El entrypoint de esta imagen escribe /tmp/haproxy.cfg al arrancar -- sin este
+      # tmpfs falla con "Read-only file system" y queda en crash loop. Encontrado en
+      # Fase 2 al verificar el fix del cgroup de memoria (el contenedor llevaba desde
+      # antes del reboot en un estado "Up" transitorio que ocultaba el crash loop).
+      - /run
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: . # raiz del repo: el Dockerfile necesita backend/ y frontend/
+      dockerfile: backend/Dockerfile
+    # ADMIN_PASSWORD_BCRYPT_HASH y SESSION_SECRET viven en .env.secrets (env_file), no
+    # en .env ni en "${...}" de este archivo. Un hash bcrypt siempre trae varios "$" (ej.
+    # "$2a$14$..."), y docker compose interpola "$" en CUALQUIER archivo que lea --
+    # incluido env_file -- asi que el valor debe llegar ya escapado ("$$" por cada "$"
+    # literal) o se corrompe. Usar scripts/hash-password.sh para generarlo ya escapado
+    # en vez de escribirlo a mano. Confirmado empiricamente contra esta version de compose.
+    env_file:
+      - .env.secrets
+    environment:
+      LISTEN_ADDR: ":8080"
+      DOCKER_PROXY_URL: "tcp://docker-socket-proxy:2375"
+      HOSTCTL_SOCKET: "/run/homelab-hostctl.sock"
+      HOSTCTL_TOKEN_FILE: "/run/secrets/hostctl_token"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+    # pid: host es necesario para leer disco/red reales del host, no del propio
+    # contenedor -- /proc/mounts y /proc/net/dev son symlinks a /proc/self/..., que
+    # resuelven al namespace de quien lee sin importar el bind-mount de /proc. Con
+    # pid:host, /host/proc/1/... apunta al PID 1 real del host. Confirmado
+    # empiricamente en Fase 2 (ver CLAUDE.md). Esto SI amplia lo que el contenedor
+    # puede ver (lista de procesos del host via /proc/<pid>/), aunque no lo que puede
+    # tocar -- sigue sin capabilities, sin escritura, sin acceso al docker.sock.
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+      # Unico estado que este proyecto persiste a proposito (ver "Sin base de datos" en
+      # CLAUDE.md): el hash bcrypt de la contrasena de admin, para poder cambiarla desde
+      # la propia UI sin recrear el contenedor. Volumen con nombre (no bind mount) para
+      # que Docker pueda copiarle el dueno correcto (10001:10001) la primera vez que
+      # esta vacio -- ver comentario en backend/Dockerfile.
+      - dashboard-data:/data
+      # Resumen de uso que escribe el asistente KORRA (~/Servicios/asistente) cada 15 min, para la
+      # pestana KORRA. Solo lectura: el dashboard nunca toca la base de datos del bot.
+      - ${KORRA_STATS_DIR:-/home/usuario/Servicios/asistente/estadisticas}:/korra:ro
+      # Contraseña de Samba que Chava cambia desde la app (handlers_samba.go). Lectura y
+      # escritura: es la carpeta secreto/ de ~/Servicios/samba (10001:1000, setgid), que Samba
+      # monta en /run/secrets. Unica escritura del dashboard fuera de su volumen /data.
+      - ${SAMBA_SECRETO_DIR:-/home/usuario/Servicios/samba/secreto}:/samba
+      # Descomentar cuando hostctl este instalado en el host (ver hostctl/README.md) --
+      # si apuntan a rutas que no existen todavia, el contenedor ni arranca. Hasta
+      # entonces el dashboard funciona igual, solo que reboot/poweroff/throttling
+      # fallan con un error claro (ver internal/hostctl/client.go, degrada con gracia).
+      # - /run/homelab-hostctl.sock:/run/homelab-hostctl.sock
+      # - /etc/homelab-hostctl/token:/run/secrets/hostctl_token:ro
+    networks:
+      - proxy-net # habla con docker-socket-proxy
+      - dashboard-net # habla con caddy (via Tailscale, Fase 6)
+      - cloudflare-net # habla con cloudflared (acceso publico, Fase 6)
+      - taskhub-finanzas # habla con la API de dinero de ~/Servicios/task-hub (pestana Dinero)
+      - paginas-web # habla con empleo-api de ~/Servicios/empleo (pestana Jobs)
+    ports:
+      # Publicado SOLO en la IP de Tailscale del Pi, mismo patron que terraria-server.
+      - "${TAILSCALE_IP:?}:8080:8080"
+    user: "10001:10001"
+    # Default 6000 es un placeholder inofensivo mientras hostctl no este instalado --
+    # Docker acepta un GID numerico que no exista todavia en el host (no necesita
+    # resolver a un nombre), asi que el contenedor arranca igual. Una vez instalado
+    # hostctl (ver hostctl/README.md), poner aqui el GID real:
+    # getent group homelab-hostctl | cut -d: -f3
+    group_add:
+      - "${HOSTCTL_GID:-6000}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m # placeholder inicial, se mide y ajusta con datos reales en Fase 2/3
+    depends_on:
+      - docker-socket-proxy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/dashboard", "-healthcheck"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  caddy:
+    image: caddy:2-alpine
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /var/lib/homelab-dashboard/tls:/tls:ro # cert/key generados por `tailscale cert` en el host
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - dashboard-net
+    ports:
+      - "${TAILSCALE_IP:?}:443:443"
+    mem_limit: 64m
+    depends_on:
+      - dashboard
+    restart: unless-stopped
+
+  # cloudflared se deja preparado pero SIN activar a proposito -- el usuario pidio
+  # quedarse por ahora solo en LAN + Tailscale. Activar con:
+  # docker compose --profile public up -d cloudflared
+  # (despues de configurar el tunel y Cloudflare Access -- ver docs/access.md)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["public"]
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - cloudflare-net
+    mem_limit: 64m
+    depends_on:
+      - dashboard
+
+networks:
+  proxy-net:
+    internal: true # docker-socket-proxy nunca sale a internet ni es alcanzable desde fuera
+  dashboard-net:
+    internal: true # via Tailscale, no necesita salida a internet
+  cloudflare-net: {} # necesita NAT/salida a internet para que cloudflared llegue al borde de Cloudflare
+  # La crea ~/Servicios/task-hub (internal: true). Si task-hub no esta levantado, el dashboard no arranca:
+  # "docker compose up -d" en ~/Servicios/task-hub primero.
+  taskhub-finanzas:
+    external: true
+  # La crea ~/Servicios/paginas-web; ahi vive empleo-api (alias empleo-api).
+  paginas-web:
+    name: paginas_web
+    external: true
+
+volumes:
+  caddy-data:
+  caddy-config:
+  dashboard-data:

@@ -1,0 +1,21 @@
+.env
+.env.secrets
+*.env
+!*.env.example
+!deploy/docker-socket-proxy.env
+
+# Go
+backend/dashboard
+hostctl/hostctl-bin
+
+# Node/Vite
+frontend/node_modules/
+frontend/dist/
+frontend/.svelte-kit/
+
+# Editores/SO
+.DS_Store
+*.swp
+
+# Contiene la IP de Tailscale del Pi -- solo local
+.env.example

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0b0b0c" />
+    <title>Homelab</title>
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- DM Sans y Outfit se cargan autohospedadas via @font-face en app.css (frontend/fonts/),
+         no desde Google Fonts -- asi el panel carga tipografia aunque el Pi no tenga
+         salida a internet en ese momento (caso de uso 100% LAN-only). -->
+
+    <!-- Barra de estado translucida y modo standalone en iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Homelab" />
+  </head>
+  <body>
+    <div id="app"></div>
+
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

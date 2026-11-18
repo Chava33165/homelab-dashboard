@@ -1,0 +1,16 @@
+// Autoriza SOLO al usuario "hostctl" a reiniciar/apagar el sistema via logind
+// (org.freedesktop.login1), sin pedir contrasena -- es lo unico que este usuario puede
+// hacer de privilegiado, y solo lo puede pedir el proceso hostctl (que a su vez exige
+// el token compartido con el dashboard antes de intentarlo). Ningun otro usuario ni
+// accion gana nada con esta regla.
+polkit.addRule(function(action, subject) {
+    var rebootActions = [
+        "org.freedesktop.login1.reboot",
+        "org.freedesktop.login1.reboot-multiple-sessions",
+        "org.freedesktop.login1.power-off",
+        "org.freedesktop.login1.power-off-multiple-sessions"
+    ];
+    if (rebootActions.indexOf(action.id) !== -1 && subject.user === "hostctl") {
+        return polkit.Result.YES;
+    }
+});

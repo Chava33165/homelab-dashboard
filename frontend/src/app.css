@@ -1,0 +1,460 @@
+/* Rutas relativas a frontend/fonts/ (no frontend/public/) -- Vite procesa url() en CSS
+   y copia+hashea el archivo a dist/assets automaticamente. Autohospedadas a proposito
+   (no CDN) -- asi el panel carga tipografia aunque el Pi no tenga salida a internet en
+   ese momento (caso de uso 100% LAN-only). */
+@font-face {
+  font-family: "DM Sans";
+  font-style: normal;
+  font-weight: 100 1000;
+  font-display: swap;
+  src: url("../fonts/dm-sans-variable.woff2") format("woff2-variations"), url("../fonts/dm-sans-variable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "DM Sans";
+  font-style: italic;
+  font-weight: 100 1000;
+  font-display: swap;
+  src: url("../fonts/dm-sans-italic-variable.woff2") format("woff2-variations"), url("../fonts/dm-sans-italic-variable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Outfit";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/outfit-variable.woff2") format("woff2-variations"), url("../fonts/outfit-variable.woff2") format("woff2");
+}
+
+/* Spider-Verse x Apple: tinta y papel de comic, rosa Gwen como UNICO acento. Las
+   superficies son solidas con borde de tinta y sombra dura desplazada (look de vineta),
+   en vez de vidrio con blur: se ve mas de comic y cuesta casi nada pintarlo. El blur
+   queda solo para lo que flota (barra de pestanas, panel de RAM). */
+:root {
+  /* ---- tipografia ---- */
+  --font-display: "Outfit", "DM Sans", -apple-system, sans-serif;
+  --font-body: "DM Sans", "Inter", -apple-system, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", monospace;
+
+  /* ---- movimiento (curvas tipo iOS, criticamente amortiguadas por default) ---- */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1); /* rebote leve, solo para cosas "lanzadas" */
+  --ease-comic: var(--ease-out);
+  --dur-press: 100ms;
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+
+  /* ---- Tinta (oscuro, default) ---- */
+  --bg: #0b0b0c;
+  --bg-elevated: #151517;
+  --c-bg: var(--bg);
+  --text: #f4f4f1;
+  --text-secondary: #a6a6a1;
+  --text-tertiary: #6e6e69;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+
+  --c-glass: #ffffff; /* base de los tintes color-mix(... N%, transparent) */
+  --c-light: #ffffff;
+  --c-dark: #000000;
+  --c-content: var(--text);
+  --c-action: #ff4f9a; /* rosa Gwen */
+  --c-accent-secondary: var(--text); /* "encendido / ok" = tinta, no otro color */
+
+  --accent: var(--c-action);
+  --danger: #ff453a;
+  --warning: #ffb547;
+  --success: var(--text);
+
+  --glass-bg: #141416;
+  --glass-border: rgba(255, 255, 255, 0.13);
+  --glass-specular: rgba(255, 255, 255, 0.07);
+  --glass-shadow: rgba(0, 0, 0, 0.55);
+  --panel-offset: rgba(255, 79, 154, 0.28); /* sombra dura de vineta */
+  --halftone: rgba(255, 255, 255, 0.06);
+  --float-bg: rgba(20, 20, 22, 0.72);
+  --scrim: rgba(0, 0, 0, 0.55);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  color-scheme: dark;
+}
+
+/* ---- Papel (claro): vineta de comic impresa, tinta negra sobre papel ---- */
+:root[data-theme="light"] {
+  --bg: #f4f2ec;
+  --bg-elevated: #ffffff;
+  --text: #0b0b0c;
+  --text-secondary: #55544f;
+  --text-tertiary: #8b8a84;
+  --border: rgba(11, 11, 12, 0.12);
+  --border-strong: rgba(11, 11, 12, 0.28);
+
+  --c-glass: #0b0b0c;
+  --c-action: #e5106f; /* rosa mas profundo: contraste AA sobre blanco */
+
+  --glass-bg: #ffffff;
+  --glass-border: #0b0b0c;
+  --glass-specular: rgba(255, 255, 255, 0);
+  --glass-shadow: rgba(11, 11, 12, 0.12);
+  --panel-offset: #0b0b0c;
+  --halftone: rgba(11, 11, 12, 0.07);
+  --float-bg: rgba(255, 255, 255, 0.78);
+  --scrim: rgba(11, 11, 12, 0.35);
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* min-height (no height): asi el area del fondo crece con la pagina y las manchas de
+   color no se cortan de golpe al hacer scroll. */
+html {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background-color: var(--bg);
+  /* Un solo resplandor rosa arriba, estatico y sin background-attachment:fixed (que
+     obligaba a repintar toda la pagina en cada scroll). */
+  /* Un solo resplandor rosa arriba, estatico y sin background-attachment:fixed (que
+     obligaba a repintar toda la pagina en cada scroll). */
+  background-image: radial-gradient(900px 420px at 50% -120px, color-mix(in srgb, var(--c-action) 13%, transparent), transparent 70%);
+  background-repeat: no-repeat;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dur-slow) ease,
+    color var(--dur-slow) ease;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+button,
+input {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* ---- Vineta: superficie solida + borde de tinta + sombra dura desplazada ---- */
+.glass {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1.5px solid var(--glass-border);
+  border-radius: 22px;
+  box-shadow:
+    inset 0 1px 0 var(--glass-specular),
+    4px 4px 0 var(--panel-offset);
+}
+
+/* Trama de puntos de imprenta, estatica, solo en la esquina superior derecha. */
+.comic-halftone-pattern {
+  position: relative;
+  overflow: hidden;
+}
+.comic-halftone-pattern::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 55%;
+  height: 70%;
+  background-image: radial-gradient(circle, var(--halftone) 1.2px, transparent 1.4px);
+  background-size: 7px 7px;
+  -webkit-mask-image: radial-gradient(circle at top right, #000, transparent 70%);
+  mask-image: radial-gradient(circle at top right, #000, transparent 70%);
+  pointer-events: none;
+}
+
+/* Titulo con "desfase de impresion": una sombra rosa fija, sin animacion. */
+.chromatic-pop {
+  text-shadow: 2px 2px 0 color-mix(in srgb, var(--c-action) 55%, transparent);
+}
+
+/* Chip tipo globo de texto de comic. */
+.ink-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 99em;
+  border: 1.5px solid var(--text);
+  color: var(--text);
+}
+
+/* Entrada escalonada de tarjetas: solo transform/opacity, una vez. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes comicBadgePop {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.6);
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  :root[data-theme="light"] {
+    --float-bg: var(--bg-elevated);
+  }
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-out);
+}
+
+/* ---- Esqueleto de pagina compartido por todas las vistas ---- */
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: calc(28px + var(--safe-top)) 20px calc(120px + var(--safe-bottom));
+}
+
+/* Vistas de tablero (Panel, Dinero, KORRA): en iPad/compu usan el ancho para 2+ columnas.
+   Las de lista (Servicios, Ajustes) se quedan en 760 px, que se lee mejor. */
+.page.wide {
+  max-width: 1240px;
+}
+
+@media (min-width: 900px) {
+  .page {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+/* Cuadricula de 2 columnas para tableros en pantalla grande; .full ocupa todo el ancho. */
+@media (min-width: 1000px) {
+  .board {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .board > .full {
+    grid-column: 1 / -1;
+  }
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 28px;
+}
+
+/* Rotulo pequeño sobre el titulo: tracking positivo porque es texto chico. */
+.eyebrow {
+  width: 100%;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--c-action);
+}
+
+/* Titulo grande: tracking negativo e interlineado justo, como los titulares de Apple. */
+.display-title {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 11vw, 52px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  color: var(--text);
+}
+
+/* Las tarjetas de una lista entran escalonadas (30-40 ms), solo al montar. */
+.stagger > :nth-child(2) {
+  animation-delay: 35ms;
+}
+.stagger > :nth-child(3) {
+  animation-delay: 70ms;
+}
+.stagger > :nth-child(4) {
+  animation-delay: 105ms;
+}
+.stagger > :nth-child(5) {
+  animation-delay: 140ms;
+}
+.stagger > :nth-child(6) {
+  animation-delay: 175ms;
+}
+.stagger > :nth-child(7) {
+  animation-delay: 210ms;
+}
+.stagger > :nth-child(8) {
+  animation-delay: 245ms;
+}
+.stagger > :nth-child(9) {
+  animation-delay: 280ms;
+}
+
+/* ---- Formularios y botones (pestaña Dinero) ---- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px; /* 16px: iOS no hace zoom al enfocar */
+  font-weight: 600;
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
+  outline: 2px solid var(--c-action);
+  outline-offset: 1px;
+}
+
+.field .money {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  min-height: 60px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chips button {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 99em;
+  border: 1.5px solid var(--border-strong);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.chips button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.btn {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 16px;
+  border: 1.5px solid var(--border-strong);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform var(--dur-press) var(--ease-out), opacity var(--dur-fast) ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn.primary {
+  background: var(--c-action);
+  border-color: var(--c-action);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--panel-offset);
+}
+
+.btn.block {
+  width: 100%;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--c-action);
+  outline-offset: 2px;
+}
+
+.form-error {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+}

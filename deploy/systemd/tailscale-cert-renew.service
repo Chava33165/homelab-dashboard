@@ -1,0 +1,8 @@
+[Unit]
+Description=Renueva el certificado de Tailscale del dashboard y reinicia Caddy
+After=network-online.target docker.service tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/usuario/Servicios/homelab-dashboard/deploy/tailscale-cert-renew.sh

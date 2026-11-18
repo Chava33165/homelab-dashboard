@@ -1,0 +1,10 @@
+[Unit]
+Description=Renovar el certificado de Tailscale del dashboard cada mes
+
+[Timer]
+OnCalendar=monthly
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

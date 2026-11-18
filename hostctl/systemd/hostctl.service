@@ -1,0 +1,38 @@
+[Unit]
+Description=homelab-hostctl -- helper privilegiado para el dashboard (reboot/poweroff/throttling)
+Requires=hostctl.socket
+After=hostctl.socket
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/homelab-hostctl
+User=hostctl
+Group=hostctl
+# homelab-hostctl: para leer /etc/homelab-hostctl/token (mismo grupo que el socket).
+# vcio: para poder llamar vcgencmd (necesita /dev/vcio).
+SupplementaryGroups=homelab-hostctl vcio
+Restart=on-failure
+RestartSec=2
+
+# Endurecimiento -- este proceso puede pedirle systemctl reboot/poweroff al host via
+# D-Bus (autorizado por la regla polkit dedicada), asi que el resto de su superficie se
+# recorta al minimo. Ver CLAUDE.md ("hostctl: el helper de host") para el analisis de
+# riesgos completo.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+RestrictSUIDSGID=true
+MemoryDenyWriteExecute=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+ReadOnlyPaths=/etc/homelab-hostctl
+
+[Install]
+WantedBy=multi-user.target
